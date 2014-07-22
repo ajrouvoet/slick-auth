@@ -1,0 +1,4 @@
+[submodule "lib/active-slick"]
+	path = lib/active-slick
+	url = https://github.com/ElessarWebb/active-slick.git
+	branch = master

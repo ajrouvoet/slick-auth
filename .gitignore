@@ -1,0 +1,8 @@
+.lib/
+.idea/
+.idea_modules/
+logs/
+*.class
+project/project/
+project/target/
+target/
