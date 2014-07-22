@@ -1,7 +1,6 @@
-package aj.slick.auth.controllers
+package aj.slick.auth
 
 import io.strongtyped.active.slick.ActiveSlick
-import org.nwb.models._
 import org.scalatra.ScalatraServlet
 
 trait UserCtrlComponent { this: ActiveSlick with Auth =>

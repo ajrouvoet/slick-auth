@@ -1,4 +1,4 @@
-package org.nwb.models
+package aj.slick.auth
 
 import com.github.tototoshi.slick.MySQLJodaSupport._
 import io.strongtyped.active.slick.ActiveSlick

@@ -1,24 +1,15 @@
 import org.scalatra.sbt._
 
-name := "slick-auth"
-
-version := "0.0.1-SNAPSHOT"
-
-scalaVersion := "2.10.3"
-
-ScalatraPlugin.scalatraSettings
-
 val ScalatraVersion = "2.3.0"
 
-lazy val active_slick = Project(
-  "active-slick",
-  base = file("lib/active-slick")
-)
+lazy val active_slick = project in file("lib/active-slick")
 
-lazy val root = (project in file(".")).
-  aggregate(active_slick).
-  dependsOn(active_slick).
-  settings(
+lazy val root = Project(
+  "root",
+  file("."),
+  settings = Defaults.defaultSettings ++ ScalatraPlugin.scalatraSettings ++ Seq(
+    version := "0.0.1-SNAPSHOT",
+    scalaVersion := "2.10.3",
     libraryDependencies ++= Seq(
       "com.typesafe.slick" %% "slick" % "2.0.2",
       "org.slf4j" % "slf4j-nop" % "1.6.4",
@@ -33,7 +24,8 @@ lazy val root = (project in file(".")).
       "org.joda" % "joda-convert" % "1.5",
       "com.github.tototoshi" %% "slick-joda-mapper" % "1.1.0",
       "org.json4s" %% "json4s-native" % "3.2.10",
-      "org.json4s"   %% "json4s-jackson" % "3.2.7",
+      "org.json4s" %% "json4s-jackson" % "3.2.7",
       "c3p0" % "c3p0" % "0.9.1.2"
     )
   )
+).dependsOn(active_slick).aggregate(active_slick)
