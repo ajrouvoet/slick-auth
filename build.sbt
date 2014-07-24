@@ -7,7 +7,7 @@ lazy val active_slick = RootProject(file("lib/active-slick"))
 lazy val root = Project(
   "slick-auth",
   file("."),
-  settings = Defaults.defaultSettings ++ ScalatraPlugin.scalatraSettings ++ Seq(
+  settings = Defaults.defaultSettings ++ Seq(
     version := "0.0.1-SNAPSHOT",
     scalaVersion := "2.10.3",
     libraryDependencies ++= Seq(
@@ -17,8 +17,7 @@ lazy val root = Project(
       "org.scalatra" %% "scalatra" % ScalatraVersion,
       "org.scalatra" %% "scalatra-specs2" % ScalatraVersion % "test",
       "ch.qos.logback" % "logback-classic" % "1.0.6" % "runtime",
-      "org.eclipse.jetty" % "jetty-webapp" % "8.1.8.v20121106" % "container",
-      "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container;provided;test" artifacts (Artifact("javax.servlet", "jar", "jar")),
+      "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "provided;test" artifacts (Artifact("javax.servlet", "jar", "jar")),
       "com.typesafe.slick" %% "slick" % "2.0.2",
       "joda-time" % "joda-time" % "2.3",
       "org.joda" % "joda-convert" % "1.5",
