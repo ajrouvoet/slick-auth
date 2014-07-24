@@ -2,10 +2,10 @@ import org.scalatra.sbt._
 
 val ScalatraVersion = "2.3.0"
 
-lazy val active_slick = project in file("lib/active-slick")
+lazy val active_slick = RootProject(file("lib/active-slick"))
 
 lazy val root = Project(
-  "root",
+  "slick-auth",
   file("."),
   settings = Defaults.defaultSettings ++ ScalatraPlugin.scalatraSettings ++ Seq(
     version := "0.0.1-SNAPSHOT",
