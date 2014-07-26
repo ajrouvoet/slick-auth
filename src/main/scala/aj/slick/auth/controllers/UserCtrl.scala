@@ -20,12 +20,12 @@ trait UserCtrlComponent { this: ActiveSlick with Auth =>
         val passwd = params.getAsOrElse[String]("key", "")
         val bcrypt = Users
           .filter(_.username === username)
-          .map(_.username)
+          .map(_.crypt)
           .firstOption
 
         bcrypt.map(crypt => passwd.isBcrypted(crypt)) match {
           case Some(true) => "now logged in!"
-          case _ => "fail!"
+          case _ => s"failed to login"
         }
       }
     }

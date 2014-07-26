@@ -20,11 +20,7 @@ object User {
   def apply(username: String, email: String, crypt: String) = new User(None, username, email, crypt)
 }
 
-trait AuthBackend
-
 trait Auth { this: ActiveSlick =>
-
-  val authBackend: AuthBackend
 
   import jdbcDriver.simple._
 
@@ -47,7 +43,7 @@ trait Auth { this: ActiveSlick =>
   }
 
   // table query
-  val Users = TableQuery[UserTable]
+  implicit val Users = TableQuery[UserTable]
 
   // active-slick table extensions
   implicit class UserQueryExt(query: TableQuery[UserTable]) extends IdTableExt[User](query)
