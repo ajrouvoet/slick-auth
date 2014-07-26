@@ -42,14 +42,7 @@ trait Auth { this: ActiveSlick =>
     )
   }
 
-  // table query
-  implicit val Users = TableQuery[UserTable]
+  val Users = TableQuery[UserTable]
 
-  // active-slick table extensions
-  implicit class UserQueryExt(query: TableQuery[UserTable]) extends IdTableExt[User](query)
-
-  // model extensions
-  implicit class UserModel(user: User) extends
-    RichModel[User, UserQueryExt](user, new UserQueryExt(Users))
+  object userimplicits extends ModelImplicits[User](Users)
 }
-

@@ -9,6 +9,7 @@ import scala.Console._
 trait CreateUserComponent { this: ActiveSlick with App with Auth =>
 
   import jdbcDriver.simple._
+  import userimplicits._
 
   def main()(implicit session: Session) = {
     val username = readPattern("username", "^[a-zA-Z0-9_-]{3,20}$")
