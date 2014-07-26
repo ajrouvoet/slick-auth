@@ -9,15 +9,19 @@ case class User(
   id: Option[Int],
   username: String,
   email: String,
-  password: String,
-  salt: String,
+  crypt: String,
   created_at: DateTime = new DateTime()
 ) extends Identifiable[User] {
   override type Id = Int
   override def withId(id: Id): User = copy(id = Some(id))
 }
 
+object User {
+  def apply(username: String, email: String, crypt: String) = new User(None, username, email, crypt)
+}
+
 trait Auth { this: ActiveSlick =>
+
   import jdbcDriver.simple._
 
   class UserTable(tag: Tag) extends IdTable[User, Int](tag, "users") {
@@ -25,21 +29,27 @@ trait Auth { this: ActiveSlick =>
     def id = column[Int]("uid", O.PrimaryKey, O.AutoInc)
     def username = column[String]("username")
     def email = column[String]("email")
-    def password = column[String]("password")
-    def salt = column[String]("salt")
+    def crypt = column[String]("crypt")
     def created_at = column[DateTime]("created_at")
 
     // constraints
     def unique_email = index("unique_email", email, unique=true)
 
     // mappings
-    override def * = (id.?, username, email, password, salt, created_at) <> (User.tupled, User.unapply)
+    override def * = (id.?, username, email, crypt, created_at) <> (
+      (x: (Option[Int], String, String, String, DateTime)) => new User(x._1, x._2, x._3, x._4, x._5),
+      User.unapply
+    )
   }
 
-  val Users = TableQuery[UserTable]
+  // table query
+  implicit val Users = TableQuery[UserTable]
 
+  // active-slick table extensions
   implicit class UserQueryExt(query: TableQuery[UserTable]) extends IdTableExt[User](query)
 
-  implicit object UserModel extends Model(Users)
+  // model extensions
+  implicit class UserModel(user: User) extends
+    RichModel[User, UserQueryExt](user, new UserQueryExt(Users))
 }
 
