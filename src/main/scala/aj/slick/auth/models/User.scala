@@ -4,6 +4,7 @@ import com.github.tototoshi.slick.MySQLJodaSupport._
 import io.strongtyped.active.slick.ActiveSlick
 import io.strongtyped.active.slick.models.Identifiable
 import org.joda.time._
+import com.github.t3hnar.bcrypt._
 
 case class User(
   id: Option[Int],
@@ -20,7 +21,7 @@ object User {
   def apply(username: String, email: String, crypt: String) = new User(None, username, email, crypt)
 }
 
-trait Auth { this: ActiveSlick =>
+trait UserComponent { this: ActiveSlick =>
 
   import jdbcDriver.simple._
 
@@ -44,5 +45,14 @@ trait Auth { this: ActiveSlick =>
 
   val Users = TableQuery[UserTable]
 
-  object userimplicits extends ModelImplicits[User](Users)
+  object userimplicits extends ModelImplicits[User](Users) {
+    implicit class UsersExt(users: TableQuery[UserTable]) extends QueryExt(users) {
+      def fromLogin(username: String, key: String)(implicit session: Session): Option[User] = {
+        Users
+          .filter(_.username === username)
+          .firstOption
+          .filter(u => key.isBcrypted(u.crypt))
+      }
+    }
+  }
 }

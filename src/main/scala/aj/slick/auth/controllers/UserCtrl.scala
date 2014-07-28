@@ -1,44 +1,50 @@
 package aj.slick.auth
 
 import io.strongtyped.active.slick.ActiveSlick
-import org.scalatra.ScalatraServlet
-import com.github.t3hnar.bcrypt._
+import org.scalatra.auth.ScentryConfig
+import org.scalatra.{ScalatraServlet, UrlGeneratorSupport}
 
 trait UserCtrlComponent { this: ActiveSlick with Auth =>
 
   import jdbcDriver.simple._
 
-  class UserCtrl(db: Database) extends ScalatraServlet with RestCtrl {
+  class UserCtrl(val db: Database) extends ScalatraServlet
+    with RestCtrl
+    with AuthSupport
+    with UrlGeneratorSupport
+    with Logging {
+    controller =>
 
-    post("/login") {
-      db withSession { implicit session =>
-        val username = params.getOrElse("user", "")
-        val passwd = params.getAsOrElse[String]("key", "")
-        val bcrypt = Users
-          .filter(_.username === username)
-          .map(_.crypt)
-          .firstOption
+    trait MyScentryConfig extends ScentryConfig {
+      override val login = url(controller.login)
+    }
 
-        bcrypt.map(crypt => passwd.isBcrypted(crypt)) match {
-          case Some(true) => "now logged in!"
-          case _ => s"failed to login"
+    override protected def scentryConfig: ScentryConfiguration = new MyScentryConfig {}.asInstanceOf[ScentryConfiguration]
+
+    val login = post("/login") {
+      ensureAnonymous(params.getOrElse("next", scentryConfig.returnTo)) {
+        // use userpassword strategy to authenticate
+        scentry.authenticate("UserPassword") match {
+          case Some(u) => s"Welcome ${u.username}"
+          case None => "Failed to log in"
         }
       }
     }
 
     getJson("/list") {
-      // get all users
-      val users = db withSession { implicit session =>
-        Users.list
-      }
+      secure {
 
-      // remove sensitive fields
-      users.toJson.removeField {
-        case ("crypt", _) => true
-        case _ => false
+        // get all users
+        val users = db withSession { implicit session =>
+          Users.list
+        }
+
+        // remove sensitive fields
+        users.toJson.removeField {
+          case ("crypt", _) => true
+          case _ => false
+        }
       }
     }
-
   }
-
 }

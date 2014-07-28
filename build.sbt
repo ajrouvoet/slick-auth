@@ -17,7 +17,6 @@ lazy val root = Project(
       "com.github.tototoshi" %% "slick-joda-mapper" % "1.1.0",
       // loggers
       "ch.qos.logback" % "logback-classic" % "1.0.6" % "runtime",
-      "org.slf4j" % "slf4j-nop" % "1.6.4",
       // scalatra
       "org.scalatest" %% "scalatest" % "2.2.0" % "test",
       "org.scalatra" %% "scalatra" % ScalatraVersion,
