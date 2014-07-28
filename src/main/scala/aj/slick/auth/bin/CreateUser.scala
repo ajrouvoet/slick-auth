@@ -1,12 +1,12 @@
 package aj.slick.auth.bin
 
-import aj.slick.auth.{Auth, User}
+import aj.slick.auth.{AuthComponent, User}
 import com.github.t3hnar.bcrypt._
 import io.strongtyped.active.slick.ActiveSlick
 
 import scala.Console._
 
-trait CreateUserComponent { this: ActiveSlick with App with Auth =>
+trait CreateUserComponent { this: ActiveSlick with App with AuthComponent =>
 
   import jdbcDriver.simple._
   import userimplicits._

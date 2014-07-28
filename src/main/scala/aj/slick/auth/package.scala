@@ -16,7 +16,7 @@ package object auth {
 
   /**
    * The main Auth support trait that mixes in access to the user classes
-   * and the scentry strategies/support
+   * and the scentry strategies/support classes
    */
-  trait Auth extends UserComponent with ScentryComponent with SecuredComponent { self: ActiveSlick => }
+  trait AuthComponent extends UserComponent with ScentryComponent with SecuredComponent { self: ActiveSlick => }
 }

@@ -21,6 +21,9 @@ object User {
   def apply(username: String, email: String, crypt: String) = new User(None, username, email, crypt)
 }
 
+/**
+ * ActiveSlick component with the user table
+ */
 trait UserComponent { this: ActiveSlick =>
 
   import jdbcDriver.simple._

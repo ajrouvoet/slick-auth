@@ -7,7 +7,7 @@ import io.strongtyped.active.slick.ActiveSlick
 import org.scalatra._
 import org.scalatra.auth.{ScentryConfig, ScentryStrategy, ScentrySupport}
 
-trait ScentryComponent { self: ActiveSlick with Auth =>
+trait ScentryComponent { self: ActiveSlick with AuthComponent =>
 
   import jdbcDriver.simple._
 

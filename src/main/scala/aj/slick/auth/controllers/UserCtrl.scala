@@ -4,23 +4,24 @@ import io.strongtyped.active.slick.ActiveSlick
 import org.scalatra.auth.ScentryConfig
 import org.scalatra.{ScalatraServlet, UrlGeneratorSupport}
 
-trait UserCtrlComponent { this: ActiveSlick with Auth =>
-
+/**
+ * This component mixes in the UserCtrl class
+ */
+trait UserCtrlComponent { this: ActiveSlick with AuthComponent =>
   import jdbcDriver.simple._
 
-  class UserCtrl(val db: Database) extends ScalatraServlet
-    with RestCtrl
-    with AuthSupport
+  class UserCtrl(val db: Database)
+    extends ScalatraServlet
     with UrlGeneratorSupport
-    with Logging {
-    controller =>
+    with RestCtrl
+    with AuthSupport { controller =>
 
-    trait MyScentryConfig extends ScentryConfig {
-      override val login = url(controller.login)
-    }
+    // set login url by reverse lookup of the login route
+    override protected def scentryConfig = new ScentryConfig {
+        override val login = url(controller.login)
+      }.asInstanceOf[ScentryConfiguration]
 
-    override protected def scentryConfig: ScentryConfiguration = new MyScentryConfig {}.asInstanceOf[ScentryConfiguration]
-
+    // login service
     val login = post("/login") {
       ensureAnonymous(params.getOrElse("next", scentryConfig.returnTo)) {
         // use userpassword strategy to authenticate
@@ -31,9 +32,14 @@ trait UserCtrlComponent { this: ActiveSlick with Auth =>
       }
     }
 
+    // logout service
+    post("/logout") {
+      scentry.logout()
+    }
+
+    // list all users
     getJson("/list") {
       secure {
-
         // get all users
         val users = db withSession { implicit session =>
           Users.list
