@@ -10,10 +10,6 @@ trait UserCtrlComponent { this: ActiveSlick with Auth =>
 
   class UserCtrl(db: Database) extends ScalatraServlet with RestCtrl {
 
-    before() {
-      contentType = "application/json"
-    }
-
     post("/login") {
       db withSession { implicit session =>
         val username = params.getOrElse("user", "")
@@ -31,8 +27,15 @@ trait UserCtrlComponent { this: ActiveSlick with Auth =>
     }
 
     getJson("/list") {
-      db withSession { implicit session =>
+      // get all users
+      val users = db withSession { implicit session =>
         Users.list
+      }
+
+      // remove sensitive fields
+      users.toJson.removeField {
+        case ("crypt", _) => true
+        case _ => false
       }
     }
 
