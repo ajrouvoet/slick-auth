@@ -1,4 +1,4 @@
-package aj.slick.auth
+package aj.slick.auth.controllers
 
 import org.json4s.jackson.Serialization._
 import org.json4s.JsonAST.JValue

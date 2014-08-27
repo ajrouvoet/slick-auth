@@ -1,5 +1,6 @@
 package aj.slick.auth
 
+import aj.slick.auth.controllers.RestCtrl
 import io.strongtyped.active.slick.ActiveSlick
 import org.scalatra.auth.ScentryConfig
 import org.scalatra.{ScalatraServlet, UrlGeneratorSupport}
