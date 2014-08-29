@@ -12,7 +12,7 @@ lazy val root = Project(
     scalaVersion := "2.10.3",
     libraryDependencies ++= Seq(
       // slick
-      "com.typesafe.slick" %% "slick" % "2.0.2",
+      "com.typesafe.slick" %% "slick" % "2.1.0",
       "c3p0" % "c3p0" % "0.9.1.2",
       "com.github.tototoshi" %% "slick-joda-mapper" % "1.1.0",
       // loggers
