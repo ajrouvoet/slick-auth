@@ -30,6 +30,7 @@ lazy val root = Project(
       "org.joda" % "joda-convert" % "1.5",
       "org.json4s" %% "json4s-native" % "3.2.10",
       "org.json4s" %% "json4s-jackson" % "3.2.7",
+      "org.json4s"   %% "json4s-ext" % "3.2.10",
       "com.github.t3hnar" %% "scala-bcrypt" % "2.4"
     )
   )
