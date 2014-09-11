@@ -54,7 +54,7 @@ trait UserComponent { this: ActiveSlick =>
     def created_at = column[DateTime]("created_at")
 
     // constraints
-    def unique_email = index("unique_email", email, unique=true)
+    def unique_email = index(s"${tableName}__unique_email", email, unique=true)
 
     // mappings
     override def * = (id.?, username, email, crypt, created_at) <> (
@@ -88,9 +88,9 @@ trait UserComponent { this: ActiveSlick =>
     def userId = column[Int]("userId")
     def permission = column[String]("permission")
 
-    def key = index("unique_user_permission", (userId, permission), unique=true)
-    def user_fk = foreignKey("user_fk", userId, Users)(_.id)
-    def permission_fk = foreignKey("permission_fk", permission, Permissions)(_.id)
+    def key = index(s"${tableName}__unique", (userId, permission), unique=true)
+    def user_fk = foreignKey(s"${tableName}__user_fk", userId, Users)(_.id)
+    def permission_fk = foreignKey(s"${tableName}__permission_fk", permission, Permissions)(_.id)
 
     def * = (userId, permission)
   }
@@ -100,22 +100,22 @@ trait UserComponent { this: ActiveSlick =>
   class UserGroupTable(tag: Tag) extends Table[(Int, Long)](tag, "user_groups") {
     def userId = column[Int]("userId")
     def groupId = column[Long]("groupId")
-    def key = index("unique_user_group", (userId, groupId), unique = true)
-    def user_fk = foreignKey("user_fk", userId, Users)(_.id)
-    def group_fk = foreignKey("group_fk", groupId, Groups)(_.id)
+    def key = index(s"${tableName}__unique", (userId, groupId), unique = true)
+    def user_fk = foreignKey(s"${tableName}__user_fk", userId, Users)(_.id)
+    def group_fk = foreignKey(s"${tableName}__group_fk", groupId, Groups)(_.id)
 
     def * = (userId, groupId)
   }
 
   val UserGroups = TableQuery[UserGroupTable]
 
-  class GroupPermissionTable(tag: Tag) extends Table[(Long, String)](tag, "user_permissions") {
+  class GroupPermissionTable(tag: Tag) extends Table[(Long, String)](tag, "group_permissions") {
     def groupId = column[Long]("groupId")
     def permission = column[String]("permission")
 
-    def key = index("unique_group_permission", (groupId, permission), unique=true)
-    def group_fk = foreignKey("group_fk", groupId, Groups)(_.id)
-    def permission_fk = foreignKey("permission_fk", permission, Permissions)(_.id)
+    def key = index(s"${tableName}__unique", (groupId, permission), unique=true)
+    def group_fk = foreignKey(s"${tableName}__group_fk", groupId, Groups)(_.id)
+    def permission_fk = foreignKey(s"${tableName}__permission_fk", permission, Permissions)(_.id)
 
     def * = (groupId, permission)
   }
