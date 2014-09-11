@@ -65,17 +65,6 @@ trait UserComponent { this: ActiveSlick =>
 
   val Users = TableQuery[UserTable]
 
-  object userimplicits extends ModelImplicits[User](Users) {
-    implicit class UsersExt(users: TableQuery[UserTable]) extends QueryExt(users) {
-      def fromLogin(username: String, key: String)(implicit session: Session): Option[User] = {
-        Users
-          .filter(_.username === username)
-          .firstOption
-          .filter(u => key.isBcrypted(u.crypt))
-      }
-    }
-  }
-
   class PermissionTable(tag: Tag) extends IdTable[Permission, String](tag, "permissions") {
     def id = column[String]("id", O.PrimaryKey)
     def description = column[String]("description")
@@ -108,6 +97,18 @@ trait UserComponent { this: ActiveSlick =>
 
   val UserPermissions = TableQuery[UserPermissionTable]
 
+  class UserGroupTable(tag: Tag) extends Table[(Int, Long)](tag, "user_groups") {
+    def userId = column[Int]("userId")
+    def groupId = column[Long]("groupId")
+    def key = index("unique_user_group", (userId, groupId), unique = true)
+    def user_fk = foreignKey("user_fk", userId, Users)(_.id)
+    def group_fk = foreignKey("group_fk", groupId, Groups)(_.id)
+
+    def * = (userId, groupId)
+  }
+
+  val UserGroups = TableQuery[UserGroupTable]
+
   class GroupPermissionTable(tag: Tag) extends Table[(Long, String)](tag, "user_permissions") {
     def groupId = column[Long]("groupId")
     def permission = column[String]("permission")
@@ -120,4 +121,47 @@ trait UserComponent { this: ActiveSlick =>
   }
 
   val GroupPermissions = TableQuery[GroupPermissionTable]
+
+  object userimplicits extends ModelImplicits[User](Users) {
+
+    implicit class UsersExt(users: TableQuery[UserTable]) {
+      def fromLogin(username: String, key: String)(implicit session: Session): Option[User] = {
+        Users
+          .filter(_.username === username)
+          .firstOption
+          .filter(u => key.isBcrypted(u.crypt))
+      }
+
+      def withPermissions = {
+        val userperms = for {
+          (u, (_, perm)) <- Users
+            .leftJoin(
+              UserPermissions.withPermissions
+            ).on(_.id === _._1)
+        } yield (u, perm)
+
+        val groupperms = for {
+          ((u, _), (_, perm)) <- Users
+            .innerJoin(UserGroups).on(_.id === _.userId)
+            .innerJoin(
+              GroupPermissions.withPermissions
+            ).on(_._2.groupId === _._1)
+        } yield (u, perm)
+
+        userperms ++ groupperms
+      }
+    }
+
+    implicit class GroupPermissionsExt(query: TableQuery[GroupPermissionTable]) {
+      def withPermissions = query
+        .innerJoin(Permissions).on(_.permission === _.id)
+        .map { case (g, p) => Tuple2(g.groupId, p.id)}
+    }
+
+    implicit class UserPermissionsExt(query: TableQuery[UserPermissionTable]) {
+      def withPermissions = query
+        .innerJoin(Permissions).on(_.permission === _.id)
+        .map { case (u, p) => (u.userId, p.id)}
+    }
+  }
 }
