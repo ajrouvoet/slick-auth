@@ -83,7 +83,7 @@ trait RestComponent { self: ActiveSlick =>
     }
 
     post("/") {
-      val inst = deserializer(request.body)
+      val inst = deserializer(parse(request.body))
 
       db withSession { implicit session =>
         inst.save().toJson
