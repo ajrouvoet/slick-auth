@@ -1,6 +1,6 @@
 package aj.slick.auth
 
-import aj.slick.auth.controllers.RestCtrl
+import aj.slick.auth.controllers.RestComponent
 import io.strongtyped.active.slick.ActiveSlick
 import org.scalatra.auth.ScentryConfig
 import org.scalatra.{ScalatraServlet, UrlGeneratorSupport}
@@ -8,7 +8,7 @@ import org.scalatra.{ScalatraServlet, UrlGeneratorSupport}
 /**
  * This component mixes in the UserCtrl class
  */
-trait UserCtrlComponent { this: ActiveSlick with AuthComponent =>
+trait UserCtrlComponent extends RestComponent { this: ActiveSlick with AuthComponent =>
   import jdbcDriver.simple._
 
   class AuthCtrl(val db: Database) extends ScalatraServlet with UrlGeneratorSupport with RestCtrl with AuthSupport {
