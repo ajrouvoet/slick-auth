@@ -22,10 +22,11 @@ object User {
 }
 
 case class Permission(
-  id: Option[String],
+  id: Option[Long],
+  name: String,
   description: String
 ) extends Identifiable[Permission] {
-  override type Id = String
+  override type Id = Long
   override def withId(id: Id): Permission = copy(id=Some(id))
 }
 
@@ -65,17 +66,20 @@ trait UserComponent { this: ActiveSlick =>
 
   val Users = TableQuery[UserTable]
 
-  class PermissionTable(tag: Tag) extends IdTable[Permission, String](tag, "permissions") {
-    def id = column[String]("id", O.PrimaryKey)
+  class PermissionTable(tag: Tag) extends IdTable[Permission, Long](tag, "permissions") {
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("name")
     def description = column[String]("description")
 
-    def * = (id.?, description) <> (Permission.tupled, Permission.unapply)
+    def unique_name = index(s"${tableName}__unique_name", name, unique=true)
+
+    def * = (id.?, name, description) <> (Permission.tupled, Permission.unapply)
   }
 
   val Permissions = TableQuery[PermissionTable]
 
   class GroupTable(tag: Tag) extends IdTable[Group, Long](tag, "groups") {
-    def id = column[Long]("id", O.PrimaryKey)
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     def description = column[String]("description")
 
@@ -84,9 +88,9 @@ trait UserComponent { this: ActiveSlick =>
 
   val Groups = TableQuery[GroupTable]
 
-  class UserPermissionTable(tag: Tag) extends Table[(Int, String)](tag, "user_permissions") {
+  class UserPermissionTable(tag: Tag) extends Table[(Int, Long)](tag, "user_permissions") {
     def userId = column[Int]("userId")
-    def permission = column[String]("permission")
+    def permission = column[Long]("permission")
 
     def key = index(s"${tableName}__unique", (userId, permission), unique=true)
     def user_fk = foreignKey(s"${tableName}__user_fk", userId, Users)(_.id)
@@ -109,9 +113,9 @@ trait UserComponent { this: ActiveSlick =>
 
   val UserGroups = TableQuery[UserGroupTable]
 
-  class GroupPermissionTable(tag: Tag) extends Table[(Long, String)](tag, "group_permissions") {
+  class GroupPermissionTable(tag: Tag) extends Table[(Long, Long)](tag, "group_permissions") {
     def groupId = column[Long]("groupId")
-    def permission = column[String]("permission")
+    def permission = column[Long]("permission")
 
     def key = index(s"${tableName}__unique", (groupId, permission), unique=true)
     def group_fk = foreignKey(s"${tableName}__group_fk", groupId, Groups)(_.id)
@@ -123,7 +127,6 @@ trait UserComponent { this: ActiveSlick =>
   val GroupPermissions = TableQuery[GroupPermissionTable]
 
   object userimplicits extends ModelImplicits[User](Users) {
-
     implicit class UsersExt(users: TableQuery[UserTable]) {
       def fromLogin(username: String, key: String)(implicit session: Session): Option[User] = {
         Users
@@ -133,6 +136,8 @@ trait UserComponent { this: ActiveSlick =>
       }
 
       def withPermissions = {
+        import authimplicits._
+
         val userperms = for {
           (u, (_, perm)) <- Users
             .leftJoin(
@@ -151,6 +156,13 @@ trait UserComponent { this: ActiveSlick =>
         userperms ++ groupperms
       }
     }
+  }
+
+  object groupimplicits extends ModelImplicits[Group](Groups)
+
+  object permissionimplicits extends ModelImplicits[Permission](Permissions)
+
+  object authimplicits {
 
     implicit class GroupPermissionsExt(query: TableQuery[GroupPermissionTable]) {
       def withPermissions = query
