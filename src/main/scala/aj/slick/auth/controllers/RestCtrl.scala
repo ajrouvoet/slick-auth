@@ -52,7 +52,10 @@ trait RestComponent { self: ActiveSlick =>
       val db: Database
     )(implicit manifest: Manifest[U]) extends ScalatraServlet with RestCtrl {
 
-    def parseId(s: String): Id
+    def parseId(s: String): Option[Id]
+    def idParam: Id = parseId(params("id")).getOrElse(
+      halt(BadRequest("Needed integer id as parameter"))
+    )
 
     // get some good serialization defaults
     val defaultFormats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all
@@ -78,7 +81,7 @@ trait RestComponent { self: ActiveSlick =>
 
     get("/:id") {
       db withSession { implicit session =>
-        query.filterById(parseId(params("id"))).first.toJson
+        query.filterById(idParam).first.toJson
       }
     }
 
@@ -92,14 +95,14 @@ trait RestComponent { self: ActiveSlick =>
 
     post("/:id") {
       db withSession { implicit session =>
-        val inst = query.withId(deserializer(parse(request.body)), parseId(params("id")))
+        val inst = query.withId(deserializer(parse(request.body)), idParam)
         inst.save().toJson
       }
     }
 
     delete("/:id") {
       db withSession { implicit session =>
-        val x = query.deleteById(parseId(params("id")))
+        val x = query.deleteById(idParam)
         Ok(x)
       }
     }
