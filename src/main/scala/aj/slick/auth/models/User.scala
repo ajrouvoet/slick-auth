@@ -46,7 +46,7 @@ trait UserComponent { this: ActiveSlick =>
 
   import jdbcDriver.simple._
 
-  class UserTable(tag: Tag) extends IdTable[User, Int](tag, "users") {
+  class UserTable(tag: Tag) extends IdTable[User, Int](tag, "auth_users") {
     // fields
     def id = column[Int]("uid", O.PrimaryKey, O.AutoInc)
     def username = column[String]("username")
@@ -66,7 +66,7 @@ trait UserComponent { this: ActiveSlick =>
 
   val Users = TableQuery[UserTable]
 
-  class PermissionTable(tag: Tag) extends IdTable[Permission, Long](tag, "permissions") {
+  class PermissionTable(tag: Tag) extends IdTable[Permission, Long](tag, "auth_permissions") {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     def description = column[String]("description")
@@ -78,7 +78,7 @@ trait UserComponent { this: ActiveSlick =>
 
   val Permissions = TableQuery[PermissionTable]
 
-  class GroupTable(tag: Tag) extends IdTable[Group, Long](tag, "groups") {
+  class GroupTable(tag: Tag) extends IdTable[Group, Long](tag, "auth)groups") {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     def description = column[String]("description")
@@ -88,7 +88,7 @@ trait UserComponent { this: ActiveSlick =>
 
   val Groups = TableQuery[GroupTable]
 
-  class UserPermissionTable(tag: Tag) extends Table[(Int, Long)](tag, "user_permissions") {
+  class UserPermissionTable(tag: Tag) extends Table[(Int, Long)](tag, "auth_user_permissions") {
     def userId = column[Int]("userId")
     def permission = column[Long]("permission")
 
@@ -101,7 +101,7 @@ trait UserComponent { this: ActiveSlick =>
 
   val UserPermissions = TableQuery[UserPermissionTable]
 
-  class UserGroupTable(tag: Tag) extends Table[(Int, Long)](tag, "user_groups") {
+  class UserGroupTable(tag: Tag) extends Table[(Int, Long)](tag, "auth_user_groups") {
     def userId = column[Int]("userId")
     def groupId = column[Long]("groupId")
     def key = index(s"${tableName}__unique", (userId, groupId), unique = true)
@@ -113,7 +113,7 @@ trait UserComponent { this: ActiveSlick =>
 
   val UserGroups = TableQuery[UserGroupTable]
 
-  class GroupPermissionTable(tag: Tag) extends Table[(Long, Long)](tag, "group_permissions") {
+  class GroupPermissionTable(tag: Tag) extends Table[(Long, Long)](tag, "auth_group_permissions") {
     def groupId = column[Long]("groupId")
     def permission = column[Long]("permission")
 
