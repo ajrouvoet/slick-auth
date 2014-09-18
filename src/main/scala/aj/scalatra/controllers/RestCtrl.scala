@@ -1,6 +1,7 @@
-package aj.slick.auth.controllers
+package aj.scalatra.controllers
 
-import io.strongtyped.active.slick.ActiveSlick
+import aj.slick.Profile
+import aj.slick.tables._
 
 import org.scalatra._
 import org.json4s.JsonDSL._
@@ -8,9 +9,9 @@ import org.json4s.jackson.Serialization._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-trait RestComponent { self: ActiveSlick =>
+trait RestComponent extends TableWithId { self: Profile =>
 
-  import jdbcDriver.simple._
+  import profile.simple._
 
   trait RestCtrl extends ScalatraServlet with JsonDSL with DoubleMode {
 
@@ -50,15 +51,11 @@ trait RestComponent { self: ActiveSlick =>
   /**
    * Abstraction of typical Rest controller
    */
-  abstract class RestFullCtrl[U <: AnyRef, Id : BaseColumnType, T <: IdTable[U, Id]]
-    (
-      val db: Database,
+  abstract class RestFullCtrl[U <: AnyRef, Id : BaseColumnType, T <: Table[U] with HasId[Id]]
+    ( val db: Database,
       val tablequery: TableQuery[T],
       val getQuery: Query[T, U]
-    )(implicit
-      manifest: Manifest[U],
-      text: TableQuery[T] => BaseIdTableExt[U,Id]
-    ) extends ScalatraServlet with RestCtrl {
+    )(implicit manifest: Manifest[U]) extends ScalatraServlet with RestCtrl {
 
     /**
      * Overload that allows you to omit the getQuery parameter,
@@ -66,8 +63,7 @@ trait RestComponent { self: ActiveSlick =>
      */
     def this
       (db: Database, tablequery: TableQuery[T])
-      (implicit manifest: Manifest[U], text: TableQuery[T] => BaseIdTableExt[U,Id]) =
-      this(db, tablequery, tablequery)
+      (implicit manifest: Manifest[U]) = this(db, tablequery, tablequery)
 
     def parseId(s: String): Option[Id]
 
@@ -107,20 +103,21 @@ trait RestComponent { self: ActiveSlick =>
       val inst = deserializer(parse(request.body))
 
       db withSession { implicit session =>
-        tablequery.save(inst).toJson
+        Ok(tablequery.insertReturnId(inst)) // return the new id
       }
     }
 
     post("/:id") {
       db withSession { implicit session =>
-        val inst = tablequery.withId(deserializer(parse(request.body)), idParam)
-        tablequery.save(inst).toJson
+        val inst = deserializer(parse(request.body))
+        val x = tablequery.filterById(idParam).update(inst)
+        Ok(x)
       }
     }
 
     delete("/:id") {
       db withSession { implicit session =>
-        val x = tablequery.deleteById(idParam)
+        val x = tablequery.filterById(idParam).delete
         Ok(x)
       }
     }

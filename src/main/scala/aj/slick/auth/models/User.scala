@@ -1,54 +1,42 @@
 package aj.slick.auth
 
+import aj.slick.Profile
+import aj.slick.tables._
+
 import com.github.tototoshi.slick.MySQLJodaSupport._
-import io.strongtyped.active.slick.ActiveSlick
-import io.strongtyped.active.slick.models.Identifiable
 import org.joda.time._
 import com.github.t3hnar.bcrypt._
 
 case class User(
-  id: Option[Int],
+  id: Option[Long],
   username: String,
   email: String,
   crypt: String,
   created_at: DateTime = new DateTime()
-) extends Identifiable[User] {
-  override type Id = Int
-  override def withId(id: Id): User = copy(id = Some(id))
-}
-
-object User {
-  def apply(username: String, email: String, crypt: String) = new User(None, username, email, crypt)
-}
+)
 
 case class Permission(
   id: Option[Long],
   name: String,
   description: String
-) extends Identifiable[Permission] {
-  override type Id = Long
-  override def withId(id: Id): Permission = copy(id=Some(id))
-}
+)
 
 case class Group(
   id: Option[Long],
   name: String,
   description: String
-) extends Identifiable[Group] {
-  override type Id = Long
-  override def withId(id: Id) = copy(id=Some(id))
-}
+)
 
 /**
  * ActiveSlick component with the user table
  */
-trait UserComponent { this: ActiveSlick =>
+trait UserComponent extends TableWithId { this: Profile =>
 
-  import jdbcDriver.simple._
+  import profile.simple._
 
-  class UserTable(tag: Tag) extends IdTable[User, Int](tag, "auth_users") {
+  class UserTable(tag: Tag) extends Table[User](tag, "auth_users") with HasId[Long] {
     // fields
-    def id = column[Int]("uid", O.PrimaryKey, O.AutoInc)
+    def id = column[Long]("uid", O.PrimaryKey, O.AutoInc)
     def username = column[String]("username")
     def email = column[String]("email")
     def crypt = column[String]("crypt")
@@ -59,14 +47,14 @@ trait UserComponent { this: ActiveSlick =>
 
     // mappings
     override def * = (id.?, username, email, crypt, created_at) <> (
-      (x: (Option[Int], String, String, String, DateTime)) => new User(x._1, x._2, x._3, x._4, x._5),
+      (x: (Option[Long], String, String, String, DateTime)) => new User(x._1, x._2, x._3, x._4, x._5),
       User.unapply
     )
   }
 
   val Users = TableQuery[UserTable]
 
-  class PermissionTable(tag: Tag) extends IdTable[Permission, Long](tag, "auth_permissions") {
+  class PermissionTable(tag: Tag) extends Table[Permission](tag, "auth_permissions") with HasId[Long] {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     def description = column[String]("description")
@@ -78,7 +66,7 @@ trait UserComponent { this: ActiveSlick =>
 
   val Permissions = TableQuery[PermissionTable]
 
-  class GroupTable(tag: Tag) extends IdTable[Group, Long](tag, "auth)groups") {
+  class GroupTable(tag: Tag) extends Table[Group](tag, "auth)groups") with HasId[Long] {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     def description = column[String]("description")
@@ -88,8 +76,8 @@ trait UserComponent { this: ActiveSlick =>
 
   val Groups = TableQuery[GroupTable]
 
-  class UserPermissionTable(tag: Tag) extends Table[(Int, Long)](tag, "auth_user_permissions") {
-    def userId = column[Int]("userId")
+  class UserPermissionTable(tag: Tag) extends Table[(Long, Long)](tag, "auth_user_permissions") {
+    def userId = column[Long]("userId")
     def permission = column[Long]("permission")
 
     def key = index(s"${tableName}__unique", (userId, permission), unique=true)
@@ -101,8 +89,8 @@ trait UserComponent { this: ActiveSlick =>
 
   val UserPermissions = TableQuery[UserPermissionTable]
 
-  class UserGroupTable(tag: Tag) extends Table[(Int, Long)](tag, "auth_user_groups") {
-    def userId = column[Int]("userId")
+  class UserGroupTable(tag: Tag) extends Table[(Long, Long)](tag, "auth_user_groups") {
+    def userId = column[Long]("userId")
     def groupId = column[Long]("groupId")
     def key = index(s"${tableName}__unique", (userId, groupId), unique = true)
     def user_fk = foreignKey(s"${tableName}__user_fk", userId, Users)(_.id)
@@ -126,54 +114,43 @@ trait UserComponent { this: ActiveSlick =>
 
   val GroupPermissions = TableQuery[GroupPermissionTable]
 
-  object userimplicits extends ModelImplicits[User](Users) {
-    implicit class UsersExt(users: TableQuery[UserTable]) {
-      def fromLogin(username: String, key: String)(implicit session: Session): Option[User] = {
-        Users
-          .filter(_.username === username)
-          .firstOption
-          .filter(u => key.isBcrypted(u.crypt))
-      }
+  implicit class UsersExt(users: TableQuery[UserTable]) {
+    def fromLogin(username: String, key: String)(implicit session: Session): Option[User] = {
+      Users
+        .filter(_.username === username)
+        .firstOption
+        .filter(u => key.isBcrypted(u.crypt))
+    }
 
-      def withPermissions = {
-        import authimplicits._
+    def withPermissions = {
+      val userperms = for {
+        (u, (_, perm)) <- Users
+          .leftJoin(
+            UserPermissions.withPermissions
+          ).on(_.id === _._1)
+      } yield (u, perm)
 
-        val userperms = for {
-          (u, (_, perm)) <- Users
-            .leftJoin(
-              UserPermissions.withPermissions
-            ).on(_.id === _._1)
-        } yield (u, perm)
+      val groupperms = for {
+        ((u, _), (_, perm)) <- Users
+          .innerJoin(UserGroups).on(_.id === _.userId)
+          .innerJoin(
+            GroupPermissions.withPermissions
+          ).on(_._2.groupId === _._1)
+      } yield (u, perm)
 
-        val groupperms = for {
-          ((u, _), (_, perm)) <- Users
-            .innerJoin(UserGroups).on(_.id === _.userId)
-            .innerJoin(
-              GroupPermissions.withPermissions
-            ).on(_._2.groupId === _._1)
-        } yield (u, perm)
-
-        userperms ++ groupperms
-      }
+      userperms ++ groupperms
     }
   }
 
-  object groupimplicits extends ModelImplicits[Group](Groups)
+  implicit class GroupPermissionsExt(query: TableQuery[GroupPermissionTable]) {
+    def withPermissions = query
+      .innerJoin(Permissions).on(_.permission === _.id)
+      .map { case (g, p) => Tuple2(g.groupId, p.id)}
+  }
 
-  object permissionimplicits extends ModelImplicits[Permission](Permissions)
-
-  object authimplicits {
-
-    implicit class GroupPermissionsExt(query: TableQuery[GroupPermissionTable]) {
-      def withPermissions = query
-        .innerJoin(Permissions).on(_.permission === _.id)
-        .map { case (g, p) => Tuple2(g.groupId, p.id)}
-    }
-
-    implicit class UserPermissionsExt(query: TableQuery[UserPermissionTable]) {
-      def withPermissions = query
-        .innerJoin(Permissions).on(_.permission === _.id)
-        .map { case (u, p) => (u.userId, p.id)}
-    }
+  implicit class UserPermissionsExt(query: TableQuery[UserPermissionTable]) {
+    def withPermissions = query
+      .innerJoin(Permissions).on(_.permission === _.id)
+      .map { case (u, p) => (u.userId, p.id)}
   }
 }

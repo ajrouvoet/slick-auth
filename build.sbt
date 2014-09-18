@@ -1,8 +1,6 @@
-
-
 val ScalatraVersion = "2.3.0"
 
-lazy val active_slick = RootProject(file("lib/active-slick"))
+lazy val slick_ext = RootProject(file("lib/slick-extensions"))
 
 lazy val root = Project(
   "slick-auth",
@@ -34,4 +32,4 @@ lazy val root = Project(
       "com.github.t3hnar" %% "scala-bcrypt" % "2.4"
     )
   )
-).dependsOn(active_slick).aggregate(active_slick)
+).dependsOn(slick_ext).aggregate(slick_ext)

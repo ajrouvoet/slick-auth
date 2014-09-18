@@ -1,6 +1,6 @@
-package aj.slick.auth.controllers
+package aj.scalatra.auth.controllers
 
-import aj.slick.auth.AuthComponent
+import aj.scalatra.auth.AuthComponent
 import org.scalatra.ScalatraServlet
 
 trait SecuredComponent { this: AuthComponent =>

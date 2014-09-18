@@ -1,15 +1,15 @@
 package aj.slick.auth.bin
 
-import aj.slick.auth.{AuthComponent, User}
+import aj.slick.Profile
+import aj.slick.auth.User
+import aj.scalatra.auth.AuthComponent
 import com.github.t3hnar.bcrypt._
-import io.strongtyped.active.slick.ActiveSlick
 
 import scala.Console._
 
-trait CreateUserComponent { this: ActiveSlick with App with AuthComponent =>
+trait CreateUserComponent { this: Profile with App with AuthComponent =>
 
-  import jdbcDriver.simple._
-  import userimplicits._
+  import profile.simple._
 
   def main()(implicit session: Session) = {
     val username = readPattern("username", "^[a-zA-Z0-9_-]{3,20}$")
@@ -20,7 +20,9 @@ trait CreateUserComponent { this: ActiveSlick with App with AuthComponent =>
       () => System.console().readPassword().mkString
     )
 
-    User(username, email, password.bcrypt).save()
+    val user = User(None, username, email, password.bcrypt)
+    val uid = user.copy(id=Some(Users.insertReturnId(user)))
+    println("Created new user ${WHITE}$uid${RESET}")
   }
 
   def readPattern(field: String, regex: String, reader: (() => String) = readLine): String = {

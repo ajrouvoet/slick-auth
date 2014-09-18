@@ -1,18 +1,19 @@
-package aj.slick.auth.strategies
+package aj.scalatra.auth.strategies
 
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 
 import aj.slick.auth._
-import io.strongtyped.active.slick.ActiveSlick
+import aj.scalatra.auth._
+import aj.slick.Profile
+
 import org.scalatra._
 import org.scalatra.auth.{ScentryConfig, ScentryStrategy, ScentrySupport}
 
-trait ScentryComponent { self: ActiveSlick with AuthComponent =>
+trait ScentryComponent { self: Profile with AuthComponent =>
 
-  import jdbcDriver.simple._
+  import profile.simple._
 
-  trait AuthSupport extends ScentrySupport[User] {
-    self: ScalatraBase =>
+  trait AuthSupport extends ScentrySupport[User] { self: ScalatraBase =>
 
     // we need access to the database
     // this will be injected in the extending controller
@@ -28,7 +29,7 @@ trait ScentryComponent { self: ActiveSlick with AuthComponent =>
     override protected def fromSession = {
       case id: String =>
         db.withSession { implicit session =>
-          Users.filter(_.id === id.toInt).firstOption.getOrElse {
+          Users.filter(_.id === id.toLong).firstOption.getOrElse {
             throw new RuntimeException("Logged in user no longer exist.")
           }
         }
@@ -72,11 +73,9 @@ trait ScentryComponent { self: ActiveSlick with AuthComponent =>
     }
   }
 
-  case class UserPasswordStrategy(db: Database, app: ScalatraBase) extends ScentryStrategy[User] with Logging {
+  case class UserPasswordStrategy(db: Database, app: ScalatraBase) extends ScentryStrategy[User] {
     def uname(implicit request: HttpServletRequest) = app.params.get("user")
     def key(implicit request: HttpServletRequest) = app.params.get("key")
-
-    import userimplicits._
 
     override def isValid(implicit request: HttpServletRequest): Boolean = {
       uname.isDefined && key.isDefined

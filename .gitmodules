@@ -1,4 +1,3 @@
-[submodule "lib/active-slick"]
-	path = lib/active-slick
-	url = https://github.com/ElessarWebb/active-slick.git
-	branch = master
+[submodule "lib/slick-extensions"]
+	path = lib/slick-extensions
+	url = https://github.com/ElessarWebb/slick-extensions.git
