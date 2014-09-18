@@ -47,17 +47,34 @@ trait RestComponent { self: ActiveSlick =>
     }
   }
 
-  abstract class RestFullCtrl[U <: AnyRef <% Model[U], Id](
-      val query: BaseIdTableExt[U,Id],
-      val db: Database
-    )(implicit manifest: Manifest[U]) extends ScalatraServlet with RestCtrl {
+  /**
+   * Abstraction of typical Rest controller
+   */
+  abstract class RestFullCtrl[U <: AnyRef, Id : BaseColumnType, T <: IdTable[U, Id]]
+    (
+      val db: Database,
+      val tablequery: TableQuery[T],
+      val getQuery: Query[T, U]
+    )(implicit
+      manifest: Manifest[U],
+      text: TableQuery[T] => BaseIdTableExt[U,Id]
+    ) extends ScalatraServlet with RestCtrl {
+
+    /**
+     * Overload that allows you to omit the getQuery parameter,
+     * it is assumed to be equal to tablequery
+     */
+    def this
+      (db: Database, tablequery: TableQuery[T])
+      (implicit manifest: Manifest[U], text: TableQuery[T] => BaseIdTableExt[U,Id]) =
+      this(db, tablequery, tablequery)
 
     def parseId(s: String): Option[Id]
+
     def idParam: Id = parseId(params("id")).getOrElse(
       halt(BadRequest("Needed integer id as parameter"))
     )
 
-    // get some good serialization defaults
     val defaultFormats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all
 
     val deserializer: PartialFunction[JValue, U] = {
@@ -68,20 +85,21 @@ trait RestComponent { self: ActiveSlick =>
       case u:U => Extraction.decompose(u)(defaultFormats)
     }
 
-    override implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all +
+    override implicit val formats = org.json4s.DefaultFormats ++
+      org.json4s.ext.JodaTimeSerializers.all +
       new CustomSerializer[U](formats => (deserializer, serializer))(manifest)
 
     // routes
 
     get("/") {
       db withSession { implicit session =>
-        query.list.toJson
+        getQuery.list.toJson
       }
     }
 
     get("/:id") {
       db withSession { implicit session =>
-        query.filterById(idParam).first.toJson
+        getQuery.filter(_.id === idParam).first.toJson
       }
     }
 
@@ -89,20 +107,20 @@ trait RestComponent { self: ActiveSlick =>
       val inst = deserializer(parse(request.body))
 
       db withSession { implicit session =>
-        inst.save().toJson
+        tablequery.save(inst).toJson
       }
     }
 
     post("/:id") {
       db withSession { implicit session =>
-        val inst = query.withId(deserializer(parse(request.body)), idParam)
-        inst.save().toJson
+        val inst = tablequery.withId(deserializer(parse(request.body)), idParam)
+        tablequery.save(inst).toJson
       }
     }
 
     delete("/:id") {
       db withSession { implicit session =>
-        val x = query.deleteById(idParam)
+        val x = tablequery.deleteById(idParam)
         Ok(x)
       }
     }
