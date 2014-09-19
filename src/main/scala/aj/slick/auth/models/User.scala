@@ -3,9 +3,10 @@ package aj.slick.auth
 import aj.slick.Profile
 import aj.slick.tables._
 
-import com.github.tototoshi.slick.MySQLJodaSupport._
+import com.github.tototoshi.slick.GenericJodaSupport
 import org.joda.time._
 import com.github.t3hnar.bcrypt._
+import scala.slick.driver.JdbcDriver
 
 case class User(
   id: Option[Long],
@@ -33,6 +34,9 @@ case class Group(
 trait UserComponent extends TableWithId { this: Profile =>
 
   import profile.simple._
+
+  object PortableJodaSupport extends GenericJodaSupport(profile.asInstanceOf[JdbcDriver])
+  import PortableJodaSupport._
 
   class UserTable(tag: Tag) extends Table[User](tag, "auth_users") with HasId[Long] {
     // fields

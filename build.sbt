@@ -14,7 +14,7 @@ lazy val root = Project(
       "c3p0" % "c3p0" % "0.9.1.2",
       "com.github.tototoshi" %% "slick-joda-mapper" % "1.1.0",
       // loggers
-      "ch.qos.logback" % "logback-classic" % "1.0.6" % "runtime",
+      "ch.qos.logback" % "logback-classic" % "1.0.6" % "test",
       // scalatra
       "org.scalatest" %% "scalatest" % "2.2.0" % "test",
       "org.scalatra" %% "scalatra" % ScalatraVersion,
@@ -32,4 +32,4 @@ lazy val root = Project(
       "com.github.t3hnar" %% "scala-bcrypt" % "2.4"
     )
   )
-).dependsOn(slick_ext).aggregate(slick_ext)
+).dependsOn(slick_ext % "compile->compile;test->test").aggregate(slick_ext)
