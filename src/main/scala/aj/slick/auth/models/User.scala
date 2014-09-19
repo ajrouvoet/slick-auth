@@ -50,8 +50,9 @@ trait UserComponent extends TableWithId { this: Profile =>
     def unique_email = index(s"${tableName}__unique_email", email, unique=true)
 
     // mappings
-    override def * = (id.?, username, email, crypt, created_at) <> (
-      (x: (Option[Long], String, String, String, DateTime)) => new User(x._1, x._2, x._3, x._4, x._5),
+    def columns = (id.?, username, email, crypt, created_at)
+    override def * = columns <> (
+      User.tupled,
       User.unapply
     )
   }
@@ -70,7 +71,7 @@ trait UserComponent extends TableWithId { this: Profile =>
 
   val Permissions = TableQuery[PermissionTable]
 
-  class GroupTable(tag: Tag) extends Table[Group](tag, "auth)groups") with HasId[Long] {
+  class GroupTable(tag: Tag) extends Table[Group](tag, "auth_groups") with HasId[Long] {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     def description = column[String]("description")
@@ -82,13 +83,13 @@ trait UserComponent extends TableWithId { this: Profile =>
 
   class UserPermissionTable(tag: Tag) extends Table[(Long, Long)](tag, "auth_user_permissions") {
     def userId = column[Long]("userId")
-    def permission = column[Long]("permission")
+    def permissionId = column[Long]("permissionId")
 
-    def key = index(s"${tableName}__unique", (userId, permission), unique=true)
-    def user_fk = foreignKey(s"${tableName}__user_fk", userId, Users)(_.id)
-    def permission_fk = foreignKey(s"${tableName}__permission_fk", permission, Permissions)(_.id)
+    def key = index(s"${tableName}__unique", (userId, permissionId), unique=true)
+    def user = foreignKey(s"${tableName}__user_fk", userId, Users)(_.id)
+    def permission = foreignKey(s"${tableName}__permission_fk", permissionId, Permissions)(_.id)
 
-    def * = (userId, permission)
+    def * = (userId, permissionId)
   }
 
   val UserPermissions = TableQuery[UserPermissionTable]
@@ -107,54 +108,59 @@ trait UserComponent extends TableWithId { this: Profile =>
 
   class GroupPermissionTable(tag: Tag) extends Table[(Long, Long)](tag, "auth_group_permissions") {
     def groupId = column[Long]("groupId")
-    def permission = column[Long]("permission")
+    def permissionId = column[Long]("permissionId")
 
-    def key = index(s"${tableName}__unique", (groupId, permission), unique=true)
-    def group_fk = foreignKey(s"${tableName}__group_fk", groupId, Groups)(_.id)
-    def permission_fk = foreignKey(s"${tableName}__permission_fk", permission, Permissions)(_.id)
+    def key = index(s"${tableName}__unique", (groupId, permissionId), unique=true)
+    def group = foreignKey(s"${tableName}__group_fk", groupId, Groups)(_.id)
+    def permission = foreignKey(s"${tableName}__permission_fk", permissionId, Permissions)(_.id)
 
-    def * = (groupId, permission)
+    def * = (groupId, permissionId)
   }
 
   val GroupPermissions = TableQuery[GroupPermissionTable]
 
-  implicit class UsersExt(users: TableQuery[UserTable]) {
-    def fromLogin(username: String, key: String)(implicit session: Session): Option[User] = {
-      Users
+  implicit class UsersExt(query: Query[UserTable, User]) {
+    def fromLogin(username: Column[String], key: String)(implicit session: Session): Option[User] = {
+      query
         .filter(_.username === username)
         .firstOption
         .filter(u => key.isBcrypted(u.crypt))
     }
 
+    def withGroups = for {
+      u <- query
+      ug <- UserGroups if u.id === ug.userId
+      g <- Groups if ug.groupId === g.id
+    } yield (u, g)
+
+    def groups = withGroups.map(_._2).groupBy(x => x).map(_._1)
+
     def withPermissions = {
       val userperms = for {
-        (u, (_, perm)) <- Users
-          .leftJoin(
-            UserPermissions.withPermissions
-          ).on(_.id === _._1)
-      } yield (u, perm)
+        u <- query
+        up <- UserPermissions if u.id === up.userId
+        p <- up.permission
+      } yield (u, p)
 
       val groupperms = for {
-        ((u, _), (_, perm)) <- Users
-          .innerJoin(UserGroups).on(_.id === _.userId)
-          .innerJoin(
-            GroupPermissions.withPermissions
-          ).on(_._2.groupId === _._1)
-      } yield (u, perm)
+        (u, g) <- query.withGroups
+        gp <- GroupPermissions.filter(_.groupId === g.id)
+        p <- gp.permission
+      } yield (u, p)
 
-      userperms ++ groupperms
+      (userperms ++ groupperms).groupBy(x => x).map(_._1)
     }
+
+    def permissions = withPermissions.map(_._2)
   }
 
-  implicit class GroupPermissionsExt(query: TableQuery[GroupPermissionTable]) {
-    def withPermissions = query
-      .innerJoin(Permissions).on(_.permission === _.id)
-      .map { case (g, p) => Tuple2(g.groupId, p.id)}
-  }
+  implicit class GroupsExt(query: Query[GroupTable, Group]) {
+    def withPermissions = for {
+      g <- query
+      gp <- GroupPermissions if g.id === gp.groupId
+      p <- Permissions if p.id === gp.permissionId
+    } yield (g, p)
 
-  implicit class UserPermissionsExt(query: TableQuery[UserPermissionTable]) {
-    def withPermissions = query
-      .innerJoin(Permissions).on(_.permission === _.id)
-      .map { case (u, p) => (u.userId, p.id)}
+    def permissions = withPermissions.map(_._2)
   }
 }
