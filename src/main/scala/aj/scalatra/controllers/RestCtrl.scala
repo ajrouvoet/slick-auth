@@ -8,12 +8,17 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.Serialization._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
+import org.slf4j.{Logger, LoggerFactory}
 
 trait RestComponent extends TableWithId { self: Profile =>
 
   import profile.simple._
 
   trait RestCtrl extends ScalatraServlet with JsonDSL with DoubleMode {
+
+    case class BadRequestException(msg: String) extends Exception(msg)
+
+    val logger = LoggerFactory.getLogger(getClass)
 
     implicit val formats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all
 
@@ -35,17 +40,24 @@ trait RestComponent extends TableWithId { self: Profile =>
       case others => others
     }
 
-    override def get(transformers: RouteTransformer*)(action: => Any): Route = {
-      super.get(transformers: _*) {
-        toPrettyJson(action)
-      }
+    override def addRoute(method: HttpMethod, transformers: Seq[RouteTransformer], action: => Any): Route = {
+      super.addRoute(method, transformers, toPrettyJson(action))
     }
 
-    override def post(transformers: RouteTransformer*)(action: => Any): Route = {
-      super.post(transformers: _*) {
-        toPrettyJson(action)
-      }
+    def jsonError(msg: String): String = pretty(render(("message", msg) ~ JObject()))
+
+    def errorHandling: PartialFunction[Throwable, Any] = {
+      case e: BadRequestException =>
+        contentType = "application/json"
+        halt(BadRequest(jsonError(e.getMessage)))
+
+      case e =>
+        contentType = "application/json"
+        halt(InternalServerError(jsonError(e.getMessage)))
+        logger.warn(e.getMessage)
     }
+
+    error(errorHandling)
   }
 
   /**
@@ -68,8 +80,10 @@ trait RestComponent extends TableWithId { self: Profile =>
     def parseId(s: String): Option[Id]
 
     def idParam: Id = parseId(params("id")).getOrElse(
-      halt(BadRequest("Needed integer id as parameter"))
+      throw BadRequestException("Needed integer id as parameter")
     )
+
+    def withId(u: U, id: Id): U
 
     val defaultFormats = org.json4s.DefaultFormats ++ org.json4s.ext.JodaTimeSerializers.all
 
@@ -103,23 +117,35 @@ trait RestComponent extends TableWithId { self: Profile =>
       val inst = deserializer(parse(request.body))
 
       db withSession { implicit session =>
-        Ok(tablequery.insertReturnId(inst)) // return the new id
+        Ok(withId(inst, tablequery.insertReturnId(inst)).toJson)
       }
     }
 
     post("/:id") {
       db withSession { implicit session =>
         val inst = deserializer(parse(request.body))
-        val x = tablequery.filterById(idParam).update(inst)
-        Ok(x)
+        val id = idParam
+        val x = tablequery.filterById(id).update(inst)
+        Ok(withId(inst, id).toJson)
       }
     }
 
     delete("/:id") {
       db withSession { implicit session =>
-        val x = tablequery.filterById(idParam).delete
-        Ok(x)
+        val id = idParam
+        val x = tablequery.filterById(id).delete
+        Ok(id)
       }
+    }
+
+    // error handling
+    override def errorHandling: PartialFunction[Throwable, Any] = {
+      case e: SlickException =>
+        logger.warn(e.getMessage)
+        contentType = "application/json"
+        halt(BadRequest(jsonError("Woops, database constraint failed")))
+
+      case e => super.errorHandling(e)
     }
   }
 }
