@@ -69,6 +69,14 @@ trait RestComponent extends TableWithId { self: Profile =>
       val getQuery: Query[T, U]
     )(implicit manifest: Manifest[U]) extends ScalatraServlet with RestCtrl {
 
+    implicit class Serializable(x: U) {
+      def toJson: JValue = serializer(x)
+    }
+
+    implicit class Deserializable(x: JValue) {
+      def fromJson: U = deserializer(x)
+    }
+
     /**
      * Overload that allows you to omit the getQuery parameter,
      * it is assumed to be equal to tablequery

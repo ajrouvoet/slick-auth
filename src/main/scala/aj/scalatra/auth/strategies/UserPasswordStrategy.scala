@@ -43,6 +43,7 @@ trait ScentryComponent { self: Profile with AuthComponent =>
 
     override protected def registerAuthStrategies: Unit = {
       scentry.register("UserPassword", app => new UserPasswordStrategy(db, app))
+      scentry.register("Mock", app => new MockStrategy(db, app))
     }
 
     /**
@@ -88,6 +89,23 @@ trait ScentryComponent { self: Profile with AuthComponent =>
           pw <- key
           usr <- Users.fromLogin(username, pw)
         } yield usr
+    }
+  }
+
+  /**
+   * Scentry mocking strategy that only needs a username to authenticate
+   */
+  case class MockStrategy(db: Database, app: ScalatraBase) extends ScentryStrategy[User] {
+    def uname(implicit request: HttpServletRequest) = app.params.get("user")
+
+    override def isValid(implicit request: HttpServletRequest): Boolean = {
+      uname.isDefined
+    }
+
+    override def authenticate()(implicit request: HttpServletRequest, response: HttpServletResponse) = db.withSession {
+      // return requested user, do not authenticate
+      implicit session =>
+        Users.filter(_.username === uname).firstOption
     }
   }
 }
