@@ -2,7 +2,6 @@ package aj.scalatra
 
 import aj.scalatra.auth.controllers.SecuredComponent
 import aj.scalatra.auth.strategies.ScentryComponent
-
 import aj.slick.Profile
 import aj.slick.auth._
 
